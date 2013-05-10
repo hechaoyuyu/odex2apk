@@ -1,0 +1,17 @@
+合并/system/app下的odex与apk，生成最终带签名的apk包
+
+用法：
+1、adb devices
+2、adb pull /system/app app
+3、adb pull /system/framework framework
+4、./odex2apk.sh app_path framework_path [platform]
+5、[platform]为可选参数，默认为testkey签名
+
+关于签名：
+build/target/product/security目录中有四组默认签名供Android.mk在编译APK使用：
+1、testkey：普通APK，默认情况下使用。
+2、platform：该APK完成一些系统的核心功能，经过对系统中存在的文件夹的访问测试，这种方式编译出来的APK所在进程的UID为system。
+3、shared：该APK需要和home/contacts进程共享数据。
+4、media：该APK是media/download系统中的一环。
+5、应用程序的Android.mk中有一个LOCAL_CERTIFICATE字段，由它指定用哪个key签名，未指定的默认用testkey。
+
