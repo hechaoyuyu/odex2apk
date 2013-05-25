@@ -4,8 +4,8 @@
 1、adb devices
 2、adb pull /system/app app
 3、adb pull /system/framework framework
-4、./odex2apk.sh app_path framework_path [platform]
-5、[platform]为可选参数，默认为testkey签名
+4、./odex2apk.sh app_path framework_path [applevel]
+5、[applevel]为可选参数，默认为15
 
 关于签名：
 build/target/product/security目录中有四组默认签名供Android.mk在编译APK使用：

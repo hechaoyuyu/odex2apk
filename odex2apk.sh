@@ -1,11 +1,13 @@
-#!/bin/sh
+#!/bin/bash
 
 APP=$1
 FRAMWORK=$2
+APILEVEL=$3
+CLASSPATH=""
+
 PRGDIR=`dirname "$0"`
 JARDIR=$PRGDIR/jar
 javaOpts="-Xmx256M"
-LOCAL_CERTIFICATE="$3"
 
 if [ -z "$APP" -o ! -d "$APP" -o -z "$FRAMWORK" -o ! -d "$FRAMWORK" ] 
 then
@@ -13,38 +15,54 @@ then
 	exit 0
 fi
 
-if [ -z "$LOCAL_CERTIFICATE" ]
+function deodex_file
+{
+        FILE=$1; TOFILE=${FILE%.*}.$2
+        
+        echo "将 $FILE 生成 class 文件到 out 目录下"
+        if [ -z "$APILEVEL" ]
+        then
+                java $javaOpts -jar $JARDIR/baksmali.jar -c $CLASSPATH -d $FRAMWORK -x $FILE || exit -1
+        else
+                java $javaOpts -jar $JARDIR/baksmali.jar -a $APILEVEL -c $CLASSPATH -d $FRAMWORK -x $FILE || exit -2
+        fi
+        
+        echo "将 out 生成 classes.dex 文件 classes.dex"
+        #dex=$out/classes.dex
+        java $javaOpts -jar $JARDIR/smali.jar out -o classes.dex || exit -3
+        
+        echo "将 classes.dex 添加到对应的 $TOFILE 中"
+        jar uf $TOFILE classes.dex 
+        
+        echo "清理生成的 out 和 classes.dex"
+        rm -r out classes.dex $FILE
+        
+        echo "优化 ..."
+        zipalign 4 $TOFILE $TOFILE.aligned
+        mv $TOFILE.aligned $TOFILE
+}
+
+echo "一定要先合并$FRAMWORK/core.odex !!!"
+ls $FRAMWORK/core.odex > /dev/null
+if [ $? -eq 0 ] 
 then
-	LOCAL_CERTIFICATE="testkey"
+        deodex_file $FRAMWORK/core.odex jar
 fi
 
-for file in `ls $APP/*.odex`
+echo "获取BOOTCLASSPATH ..."
+for f in $FRAMWORK/*.jar
 do
-	apk=${file%.*}.apk
-	if [ ! -r "$apk" ]
-	then
-		echo "$file 没有对应的 apk 文件！"
-		continue
-	fi
+    CLASSPATH=$CLASSPATH:$f
+done
+echo "BOOTCLASSPATH=$CLASSPATH"
 
-	echo "将 $file 生成 class 文件到 out 目录下"
-	#out=$file.out
-	java $javaOpts -jar $JARDIR/baksmali.jar -d $FRAMWORK -x $file
+for file in $FRAMWORK/*.odex
+do
+        deodex_file $file jar
+done
 
-	echo "将 out 生成 classes.dex 文件 classes.dex"
-	#dex=$out/classes.dex
-	java $javaOpts -jar $JARDIR/smali.jar out -o classes.dex
-
-	echo "将 classes.dex 添加到对应的 $apk 中"
-	7z a -tzip $apk classes.dex 1>/dev/null
-
-	echo "清理生成的 out 和 classes.dex"
-	rm -r out classes.dex
-
-	echo "对 $apk 重新进行数名签名为 $apk.signed"
-	java $javaOpts -jar $JARDIR/signapk.jar $JARDIR/$LOCAL_CERTIFICATE.x509.pem $JARDIR/$LOCAL_CERTIFICATE.pk8 $apk $apk.signed
-		
-	echo "清理 。。。。。。"
-	mv $apk.signed $apk
-	rm $file
+echo "合并$APP ..."
+for file in $APP/*.odex
+do
+        deodex_file $file apk
 done
