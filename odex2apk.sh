@@ -42,27 +42,30 @@ function deodex_file
         mv $TOFILE.aligned $TOFILE
 }
 
-echo "一定要先合并$FRAMWORK/core.odex !!!"
-ls $FRAMWORK/core.odex > /dev/null
+ls $FRAMWORK/core.odex 2>/dev/null
 if [ $? -eq 0 ] 
 then
+	echo "一定要先合并$FRAMWORK/core.odex !!!"
         deodex_file $FRAMWORK/core.odex jar
+else
+	echo "没有获取到core.odex文件，可能已经合并完成！"
+	exit 0 
 fi
 
 echo "获取BOOTCLASSPATH ..."
-for f in $FRAMWORK/*.jar
+for f in `ls $FRAMWORK/*.jar`
 do
     CLASSPATH=$CLASSPATH:$f
 done
 echo "BOOTCLASSPATH=$CLASSPATH"
 
-for file in $FRAMWORK/*.odex
+for file in `ls $FRAMWORK/*.odex`
 do
         deodex_file $file jar
 done
 
 echo "合并$APP ..."
-for file in $APP/*.odex
+for file in `ls $APP/*.odex`
 do
         deodex_file $file apk
 done
