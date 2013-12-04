@@ -3,7 +3,6 @@
 APP=$1
 FRAMWORK=$2
 APILEVEL=$3
-CLASSPATH=""
 
 PRGDIR=`dirname "$0"`
 JARDIR=$PRGDIR/jar
@@ -22,9 +21,9 @@ function deodex_file
         echo "将 $FILE 生成 class 文件到 out 目录下"
         if [ -z "$APILEVEL" ]
         then
-                java $javaOpts -jar $JARDIR/baksmali.jar -c $CLASSPATH -d $FRAMWORK -x $FILE || exit -1
+                java $javaOpts -jar $JARDIR/baksmali.jar -d $FRAMWORK -x $FILE || exit -1
         else
-                java $javaOpts -jar $JARDIR/baksmali.jar -a $APILEVEL -c $CLASSPATH -d $FRAMWORK -x $FILE || exit -2
+                java $javaOpts -jar $JARDIR/baksmali.jar -a $APILEVEL -d $FRAMWORK -x $FILE || exit -2
         fi
         
         echo "将 out 生成 classes.dex 文件 classes.dex"
@@ -41,23 +40,6 @@ function deodex_file
         zipalign 4 $TOFILE $TOFILE.aligned
         mv $TOFILE.aligned $TOFILE
 }
-
-ls $FRAMWORK/core.odex 2>/dev/null
-if [ $? -eq 0 ] 
-then
-	echo "一定要先合并$FRAMWORK/core.odex !!!"
-        deodex_file $FRAMWORK/core.odex jar
-else
-	echo "没有获取到core.odex文件，可能已经合并完成！"
-	exit 0 
-fi
-
-echo "获取BOOTCLASSPATH ..."
-for f in `ls $FRAMWORK/*.jar`
-do
-    CLASSPATH=$CLASSPATH:$f
-done
-echo "BOOTCLASSPATH=$CLASSPATH"
 
 for file in `ls $FRAMWORK/*.odex`
 do
